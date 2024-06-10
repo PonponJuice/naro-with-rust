@@ -7,6 +7,11 @@ use crate::{error::AppError, AppState};
 use super::user::User;
 
 
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, sqlx::FromRow, PartialEq, Eq)]
+pub struct SessionId {
+    pub session_id: String,
+}
+
 pub async fn auth_middleware(
     State(app): State<AppState>,
     TypedHeader(cookie): TypedHeader<Cookie>,
@@ -18,15 +23,18 @@ pub async fn auth_middleware(
     let display_id = app.db
         .get_display_id_by_session_id(session_id)
         .await?
-        .with_context(|| "Failed to get display ID by session ID")?;
+        .with_context(|| "Session ID not found")?;
 
     let user = app.db
         .get_user_by_display_id(&display_id)
         .await?
         .with_context(|| "Failed to get user by display ID")?;
 
+    let session_id = SessionId { session_id: session_id.to_string() };
+
     req.extensions_mut().insert(user);
     req.extensions_mut().insert(app);
+    req.extensions_mut().insert(session_id);
 
     Ok(next.run(req).await)
 }
@@ -44,6 +52,22 @@ where
             .get::<Self>()
             .expect("User not found. Did you add auth_middleware?");
         Ok(user.clone())
+    }
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for SessionId
+where
+    S: Send + Sync,
+{
+    type Rejection = StatusCode;
+
+    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+        let session_id = parts
+            .extensions
+            .get::<Self>()
+            .expect("SessionId not found. Did you add auth_middleware?");
+        Ok(session_id.clone())
     }
 }
 

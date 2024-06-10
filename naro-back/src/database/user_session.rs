@@ -28,4 +28,20 @@ impl DataBase {
 
         Ok(session.and_then(|s| s.get("user")))
     }
+
+    pub async fn delete_session(&self, session_id: String) -> anyhow::Result<()> {
+        let session = self.session_store
+            .load_session(session_id)
+            .await
+            .with_context(||"Failed to load session")?
+            .with_context(||"Session not found")?;
+
+        self.session_store
+            .destroy_session(session)
+            .await
+            .with_context(||"Failed to delete session")?;
+
+        Ok(())
+    }
+
 }

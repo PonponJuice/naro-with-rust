@@ -40,7 +40,7 @@ pub struct SignInUserRequest {
     pub password: String,
 }
 
-pub async fn sign_in(
+pub async fn login(
     State(app): State<AppState>,
     Json(req): Json<SignInUserRequest>,
 ) -> anyhow::Result<impl IntoResponse, AppError> {
@@ -60,6 +60,14 @@ pub async fn sign_in(
     );
 
     Ok((headers, Redirect::to("/me")))
+}
+
+pub async fn logout(
+    State(app): State<AppState>,
+    session_id: crate::database::auth::SessionId
+) -> anyhow::Result<impl IntoResponse, AppError> {
+    app.db.delete_session(session_id.session_id).await?;
+    Ok(Redirect::to("/"))
 }
 
 pub async fn me(

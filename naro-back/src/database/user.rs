@@ -10,7 +10,7 @@ pub struct User {
 impl DataBase {
     pub async fn get_user_by_display_id(&self, display_id: &str) -> anyhow::Result<Option<User>> {
         let user = sqlx::query_as::<_, User>(r#"
-        SELECT (id, username, display_id)
+        SELECT *
         FROM users
         WHERE display_id = ?
         "#)
