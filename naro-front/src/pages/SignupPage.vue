@@ -5,7 +5,20 @@ const username = ref<string>("")
 const display_id = ref<string>("")
 const password = ref<string>("")
 const disable = ref<boolean>(false)
-const blank = computed(() => username.value.length === 0 || display_id.value.length === 0 || password.value.length === 0)
+const invalid = computed(() => {
+	let invalid = false
+
+	// 文字列の長さの確認
+	if(username.value.length === 0 || display_id.value.length === 0 || password.value.length < 8){
+		invalid = true
+	}
+	// パスワードの強度の確認
+	if(!/[a-z]/.test(password.value) || !/[A-Z]/.test(password.value) || !/[0-9]/.test(password.value)){
+		invalid = true
+	}
+
+	return invalid
+})
 
 const login = async () => {
 		disable.value = true
@@ -42,7 +55,7 @@ const login = async () => {
 			<input type="password" v-model="password" />
 		</div>
 		<div>
-			<button :disabled="disable || blank" @click="login">singup</button>
+			<button :disabled="disable || invalid" @click="login">singup</button>
 		</div>
 	</div>
 </template>
