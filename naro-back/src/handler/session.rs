@@ -16,16 +16,34 @@ pub struct SignUpUserRequest {
     pub password: String,
 }
 
+fn is_valid_password(password: &str) -> bool {
+    password.len() >= 8
+        && password.chars().any(|c| c.is_ascii_uppercase())
+        && password.chars().any(|c| c.is_ascii_lowercase())
+        && password.chars().any(|c| c.is_numeric())
+}
+
 pub async fn sign_up(
     State(app): State<AppState>,
     Json(req): Json<SignUpUserRequest>,
 ) -> anyhow::Result<impl IntoResponse, AppError> {
+    if req.display_id.is_empty() {
+        return Err(anyhow!("Display ID is empty").into());
+    }
+    if req.username.is_empty() {
+        return Err(anyhow!("Username is empty").into());
+    }
+    if is_valid_password(&req.password) {
+        return Err(anyhow!("Password is invalid").into());
+    }
+
     let id = uuid::Uuid::new_v4();
     let user = User {
         id: id.into(),
         display_id: req.display_id,
         username: req.username,
     };
+
 
     app.db.create_user(&user).await?;
     app.db.save_password(user.display_id, req.password).await?;
