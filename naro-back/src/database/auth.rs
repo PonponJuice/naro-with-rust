@@ -88,19 +88,3 @@ where
         Ok(session_id.clone())
     }
 }
-
-#[async_trait]
-impl<S> FromRequestParts<S> for AppState
-where
-    S: Send + Sync,
-{
-    type Rejection = StatusCode;
-
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
-        let app = parts
-            .extensions
-            .get::<Self>()
-            .expect("AppState not found. Did you add auth_middleware?");
-        Ok(app.clone())
-    }
-}
