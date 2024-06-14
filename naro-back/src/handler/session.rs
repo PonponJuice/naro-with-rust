@@ -4,6 +4,7 @@ use axum::response::Redirect;
 use axum::{extract::State, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 
+use crate::database::auth::DisplayId;
 use crate::database::user::User;
 use crate::AppState;
 
@@ -129,6 +130,16 @@ pub async fn logout(
     Ok(Redirect::to("/"))
 }
 
-pub async fn me(user: User) -> anyhow::Result<impl IntoResponse, (StatusCode, &'static str)> {
+pub async fn me(
+    display_id: DisplayId,
+    State(app): State<AppState>,
+) -> anyhow::Result<impl IntoResponse, (StatusCode, &'static str)> {
+    let user = app
+        .db
+        .get_user_by_display_id(&display_id.display_id)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to get user"))?
+        .ok_or((StatusCode::UNAUTHORIZED, "User does not exist"))?;
+
     Ok(Json(user))
 }
