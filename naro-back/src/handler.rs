@@ -1,6 +1,10 @@
-use axum::{middleware::from_fn_with_state, response::IntoResponse, routing::{get, post}};
 use crate::database::auth;
 use crate::AppState;
+use axum::{
+    middleware::from_fn_with_state,
+    response::IntoResponse,
+    routing::{get, post},
+};
 
 pub mod session;
 
@@ -18,12 +22,12 @@ pub fn make_router(state: AppState) -> axum::Router {
         .route("/ping", get(ping))
         .route("/signup", post(session::sign_up))
         .route("/login", post(session::login));
-    
+
     let private = axum::Router::new()
         .route("/me", get(session::me))
         .route("/logout", post(session::logout))
         .route_layer(from_fn_with_state(state.clone(), auth::auth_middleware));
-    
+
     axum::Router::new()
         .nest("/", public)
         .nest("/", private)

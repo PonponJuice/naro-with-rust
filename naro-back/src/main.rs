@@ -1,11 +1,11 @@
+use async_sqlx_session::MySqlSessionStore;
+use dotenvy::dotenv;
 use sqlx::{MySql, Pool};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use async_sqlx_session::MySqlSessionStore;
-use dotenvy::dotenv;
 
-mod handler;
 mod database;
+mod handler;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

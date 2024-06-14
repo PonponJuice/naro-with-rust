@@ -1,10 +1,15 @@
-use axum::{async_trait, extract::{FromRequestParts, Request, State}, http::{request::Parts, StatusCode}, middleware::Next, response::IntoResponse};
+use axum::{
+    async_trait,
+    extract::{FromRequestParts, Request, State},
+    http::{request::Parts, StatusCode},
+    middleware::Next,
+    response::IntoResponse,
+};
 use axum_extra::{headers::Cookie, TypedHeader};
 
 use crate::AppState;
 
 use super::user::User;
-
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, sqlx::FromRow, PartialEq, Eq)]
 pub struct SessionId {
@@ -15,24 +20,35 @@ pub async fn auth_middleware(
     State(app): State<AppState>,
     TypedHeader(cookie): TypedHeader<Cookie>,
     mut req: Request,
-    next: Next
+    next: Next,
 ) -> anyhow::Result<impl IntoResponse, (StatusCode, &'static str)> {
-    let session_id = cookie.get("session_id")
-        .ok_or((StatusCode::UNAUTHORIZED, "something wrong in getting session"))?;
+    let session_id = cookie.get("session_id").ok_or((
+        StatusCode::UNAUTHORIZED,
+        "something wrong in getting session",
+    ))?;
 
-    let display_id = app.db
+    let display_id = app
+        .db
         .get_display_id_by_session_id(session_id)
         .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR , "Failed to get display ID"))?
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to get display ID",
+            )
+        })?
         .ok_or((StatusCode::UNAUTHORIZED, "please login"))?;
 
-    let user = app.db
+    let user = app
+        .db
         .get_user_by_display_id(&display_id)
         .await
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to get user"))?
         .ok_or((StatusCode::UNAUTHORIZED, "please login"))?;
 
-    let session_id = SessionId { session_id: session_id.to_string() };
+    let session_id = SessionId {
+        session_id: session_id.to_string(),
+    };
 
     req.extensions_mut().insert(user);
     req.extensions_mut().insert(app);
