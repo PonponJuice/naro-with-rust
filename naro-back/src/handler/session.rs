@@ -4,7 +4,7 @@ use axum::response::Redirect;
 use axum::{extract::State, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 
-use crate::database::auth::DisplayId;
+use crate::database::auth::MyUuid;
 use crate::database::user::User;
 use crate::AppState;
 
@@ -95,7 +95,7 @@ pub async fn login(
         return Err((StatusCode::UNAUTHORIZED, "Password is incorrect"));
     }
 
-    let cookie_value = app.db.create_session(user.display_id).await.map_err(|_| {
+    let cookie_value = app.db.create_session(user.id).await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to create session",
@@ -131,12 +131,12 @@ pub async fn logout(
 }
 
 pub async fn me(
-    display_id: DisplayId,
+    uuid: MyUuid,
     State(app): State<AppState>,
 ) -> anyhow::Result<impl IntoResponse, (StatusCode, &'static str)> {
     let user = app
         .db
-        .get_user_by_display_id(&display_id.display_id)
+        .get_user_by_uuid(&uuid.uuid)
         .await
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to get user"))?
         .ok_or((StatusCode::UNAUTHORIZED, "User does not exist"))?;

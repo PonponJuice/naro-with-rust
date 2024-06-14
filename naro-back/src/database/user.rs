@@ -23,6 +23,21 @@ impl DataBase {
         Ok(user)
     }
 
+    pub async fn get_user_by_uuid(&self, uuid: &str) -> anyhow::Result<Option<User>> {
+        let user = sqlx::query_as::<_, User>(
+            r#"
+        SELECT *
+        FROM users
+        WHERE id = ?
+        "#,
+        )
+        .bind(uuid)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(user)
+    }
+
     pub async fn create_user(&self, user: &User) -> anyhow::Result<()> {
         sqlx::query(
             r#"

@@ -15,8 +15,8 @@ pub struct SessionId {
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, sqlx::FromRow, PartialEq, Eq)]
-pub struct DisplayId {
-    pub display_id: String,
+pub struct MyUuid{
+    pub uuid: String,
 }
 
 pub async fn auth_middleware(
@@ -30,9 +30,9 @@ pub async fn auth_middleware(
         "something wrong in getting session",
     ))?;
 
-    let display_id = app
+    let uuid = app
         .db
-        .get_display_id_by_session_id(session_id)
+        .get_uuid_by_session_id(session_id)
         .await
         .map_err(|_| {
             (
@@ -46,29 +46,29 @@ pub async fn auth_middleware(
     let session_id = SessionId {
         session_id: session_id.to_string(),
     };
-    let display_id = DisplayId {
-        display_id: display_id.to_string(),
+    let uuid = MyUuid {
+        uuid: uuid.parse().unwrap(),
     };
 
-    req.extensions_mut().insert(display_id);
+    req.extensions_mut().insert(uuid);
     req.extensions_mut().insert(session_id);
 
     Ok(next.run(req).await)
 }
 
 #[async_trait]
-impl<S> FromRequestParts<S> for DisplayId
+impl<S> FromRequestParts<S> for MyUuid
 where
     S: Send + Sync,
 {
     type Rejection = StatusCode;
 
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
-        let display_id = parts
+        let uuid = parts
             .extensions
             .get::<Self>()
-            .expect("DisplayId not found. Did you add auth_middleware?");
-        Ok(display_id.clone())
+            .expect("MyUuid not found. Did you add auth_middleware?");
+        Ok(uuid.clone())
     }
 }
 

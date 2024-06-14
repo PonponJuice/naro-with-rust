@@ -4,10 +4,10 @@ use async_session::{Session, SessionStore};
 use crate::DataBase;
 
 impl DataBase {
-    pub async fn create_session(&self, display_id: String) -> anyhow::Result<String> {
+    pub async fn create_session(&self, uuid: String) -> anyhow::Result<String> {
         let mut session = Session::new();
         session
-            .insert("user", display_id)
+            .insert("id", uuid)
             .with_context(|| "Failed to insert user into session")?;
 
         let session_id = self
@@ -20,7 +20,7 @@ impl DataBase {
         Ok(session_id)
     }
 
-    pub async fn get_display_id_by_session_id(
+    pub async fn get_uuid_by_session_id(
         &self,
         session_id: &str,
     ) -> anyhow::Result<Option<String>> {
@@ -31,7 +31,7 @@ impl DataBase {
             .await
             .with_context(|| "Failed to load session")?;
 
-        Ok(session.and_then(|s| s.get("user")))
+        Ok(session.and_then(|s| s.get("id")))
     }
 
     pub async fn delete_session(&self, session_id: String) -> anyhow::Result<()> {
