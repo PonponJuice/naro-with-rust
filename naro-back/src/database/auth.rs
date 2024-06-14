@@ -1,8 +1,7 @@
-use anyhow::Context;
 use axum::{async_trait, extract::{FromRequestParts, Request, State}, http::{request::Parts, StatusCode}, middleware::Next, response::IntoResponse};
 use axum_extra::{headers::Cookie, TypedHeader};
 
-use crate::{error::AppError, AppState};
+use crate::AppState;
 
 use super::user::User;
 
@@ -17,18 +16,21 @@ pub async fn auth_middleware(
     TypedHeader(cookie): TypedHeader<Cookie>,
     mut req: Request,
     next: Next
-) -> anyhow::Result<impl IntoResponse, AppError> {
-    let session_id = cookie.get("session_id").with_context(|| "Session ID not found")?;
+) -> anyhow::Result<impl IntoResponse, (StatusCode, &'static str)> {
+    let session_id = cookie.get("session_id")
+        .ok_or((StatusCode::UNAUTHORIZED, "something wrong in getting session"))?;
 
     let display_id = app.db
         .get_display_id_by_session_id(session_id)
-        .await?
-        .with_context(|| "Session ID not found")?;
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR , "Failed to get display ID"))?
+        .ok_or((StatusCode::UNAUTHORIZED, "please login"))?;
 
     let user = app.db
         .get_user_by_display_id(&display_id)
-        .await?
-        .with_context(|| "Failed to get user by display ID")?;
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to get user"))?
+        .ok_or((StatusCode::UNAUTHORIZED, "please login"))?;
 
     let session_id = SessionId { session_id: session_id.to_string() };
 

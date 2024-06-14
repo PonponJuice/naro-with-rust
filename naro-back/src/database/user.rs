@@ -23,10 +23,6 @@ impl DataBase {
     
 
     pub async fn create_user(&self, user: &User) -> anyhow::Result<()> {
-        if self.get_user_by_display_id(&user.display_id).await?.is_some() {
-            return Err(anyhow::anyhow!("User already exists"));
-        }
-
         sqlx::query(r#"
         INSERT INTO users (id, username, display_id)
         VALUES (?, ?, ?)

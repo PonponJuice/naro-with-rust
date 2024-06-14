@@ -1,11 +1,9 @@
-use anyhow::{anyhow, Context};
 use axum::http::header::SET_COOKIE;
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::Redirect;
 use axum::{extract::State, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 
-use crate::error::AppError;
 use crate::AppState;
 use crate::database::user::User;
 
@@ -26,16 +24,22 @@ fn is_valid_password(password: &str) -> bool {
 pub async fn sign_up(
     State(app): State<AppState>,
     Json(req): Json<SignUpUserRequest>,
-) -> anyhow::Result<impl IntoResponse, AppError> {
+) -> anyhow::Result<impl IntoResponse, (StatusCode , &'static str)> {
     if req.display_id.is_empty() {
-        return Err(anyhow!("Display ID is empty").into());
+        return Err((StatusCode::BAD_REQUEST, "Display ID is empty"));
     }
     if req.username.is_empty() {
-        return Err(anyhow!("Username is empty").into());
+        return Err((StatusCode::BAD_REQUEST, "Username is empty"));
     }
     if is_valid_password(&req.password) {
-        return Err(anyhow!("Password is invalid").into());
+        return Err((StatusCode::BAD_REQUEST, "Password is invalid"));
     }
+    if app.db
+        .get_user_by_display_id(&req.display_id)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to get user"))?.is_some() {
+            return Err((StatusCode::BAD_REQUEST, "User already exists"));
+        }
 
     let id = uuid::Uuid::new_v4();
     let user = User {
@@ -44,9 +48,14 @@ pub async fn sign_up(
         username: req.username,
     };
 
-
-    app.db.create_user(&user).await?;
-    app.db.save_password(user.display_id, req.password).await?;
+    app.db
+        .create_user(&user)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create user"))?;
+    app.db
+        .save_password(user.display_id, req.password)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to save password"))?;
 
     Ok(())
 }
@@ -61,20 +70,32 @@ pub struct SignInUserRequest {
 pub async fn login(
     State(app): State<AppState>,
     Json(req): Json<SignInUserRequest>,
-) -> anyhow::Result<impl IntoResponse, AppError> {
-    let user = app.db.get_user_by_display_id(&req.display_id).await?.ok_or(anyhow!("User does not exist"))?;
+) -> anyhow::Result<impl IntoResponse, (StatusCode , &'static str)> {
+    let user = app.db
+        .get_user_by_display_id(&req.display_id)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to get user"))?
+        .ok_or((StatusCode::UNAUTHORIZED, "User does not exist"))?;
 
-    if !app.db.verify_user_password(req.display_id, req.password).await? {
-        return Err(anyhow!("Invalid password").into());
-    }
+    if !app.db
+        .verify_user_password(req.display_id, req.password)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to verify password"))? {
+            return Err((StatusCode::UNAUTHORIZED, "Password is incorrect"));
+        }
 
-    let cookie_value = app.db.create_session(user.display_id).await?;
+    let cookie_value = app.db
+        .create_session(user.display_id)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create session"))?;
 
     let mut headers = HeaderMap::new();
 
     headers.insert(
         SET_COOKIE,
-        format!("session_id={cookie_value}; HttpOnly; SameSite=Strict").parse().with_context(|| "Failed to parse cookie")?
+        format!("session_id={cookie_value}; HttpOnly; SameSite=Strict")
+            .parse()
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create cookie"))?
     );
 
     Ok((headers, Redirect::to("/me")))
@@ -83,13 +104,16 @@ pub async fn login(
 pub async fn logout(
     State(app): State<AppState>,
     session_id: crate::database::auth::SessionId
-) -> anyhow::Result<impl IntoResponse, AppError> {
-    app.db.delete_session(session_id.session_id).await?;
+) -> anyhow::Result<impl IntoResponse, (StatusCode , &'static str)> {
+    app.db
+        .delete_session(session_id.session_id)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to delete session"))?;
     Ok(Redirect::to("/"))
 }
 
 pub async fn me(
     user: User
-) -> anyhow::Result<impl IntoResponse, AppError> {
+) -> anyhow::Result<impl IntoResponse, (StatusCode , &'static str)> {
     Ok(Json(user))
 }

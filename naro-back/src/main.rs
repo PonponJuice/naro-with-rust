@@ -6,7 +6,6 @@ use dotenvy::dotenv;
 
 mod handler;
 mod database;
-mod error;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
