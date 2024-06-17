@@ -28,6 +28,7 @@ pub fn make_router(state: AppState) -> axum::Router {
         .route("/me", get(session::me))
         .route("/logout", post(session::logout))
         .route("/city/:cityname", get(country::get_city_handler))
+        .route("/cities", post(country::post_city_handler))
         .route_layer(from_fn_with_state(state.clone(), auth::auth_middleware));
 
     axum::Router::new()
