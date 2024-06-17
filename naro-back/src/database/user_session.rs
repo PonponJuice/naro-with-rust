@@ -20,10 +20,7 @@ impl DataBase {
         Ok(session_id)
     }
 
-    pub async fn get_uuid_by_session_id(
-        &self,
-        session_id: &str,
-    ) -> anyhow::Result<Option<String>> {
+    pub async fn get_uuid_by_session_id(&self, session_id: &str) -> anyhow::Result<Option<String>> {
         dbg!(session_id);
         let session = self
             .session_store

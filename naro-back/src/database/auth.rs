@@ -15,7 +15,7 @@ pub struct SessionId {
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, sqlx::FromRow, PartialEq, Eq)]
-pub struct MyUuid{
+pub struct MyUuid {
     pub uuid: String,
 }
 
@@ -42,7 +42,6 @@ pub async fn auth_middleware(
         })?
         .ok_or((StatusCode::UNAUTHORIZED, "please login"))?;
 
-    
     let session_id = SessionId {
         session_id: session_id.to_string(),
     };
