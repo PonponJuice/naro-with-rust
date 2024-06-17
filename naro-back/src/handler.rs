@@ -6,6 +6,7 @@ use axum::{
     routing::{get, post},
 };
 
+pub mod country;
 pub mod session;
 
 async fn root() -> impl IntoResponse {
@@ -26,6 +27,7 @@ pub fn make_router(state: AppState) -> axum::Router {
     let private = axum::Router::new()
         .route("/me", get(session::me))
         .route("/logout", post(session::logout))
+        .route("/city/:cityname", get(country::get_city_handler))
         .route_layer(from_fn_with_state(state.clone(), auth::auth_middleware));
 
     axum::Router::new()

@@ -5,6 +5,7 @@ use sqlx::mysql;
 use crate::DataBase;
 
 pub mod auth;
+pub mod country;
 pub mod user;
 pub mod user_password;
 pub mod user_session;
