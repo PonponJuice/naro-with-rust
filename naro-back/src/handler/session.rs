@@ -3,49 +3,39 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::Redirect;
 use axum::{extract::State, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
+use validator::{Validate, ValidationError};
 
 use crate::context::errors::AppError;
 use crate::database::auth::MyUuid;
 use crate::database::user::User;
 use crate::AppState;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
 pub struct SignUpUserRequest {
+    #[validate(length(min = 1, message = "Display ID is empty"))]
     pub display_id: String,
+    #[validate(length(min = 1, message = "Username is empty"))]
     pub username: String,
+    #[validate(custom(function = "is_valid_password", message = "Password is invalid"))]
     pub password: String,
 }
 
-fn is_valid_password(password: &str) -> bool {
-    password.len() >= 8
+fn is_valid_password(password: &str) -> Result<(), ValidationError> {
+    if password.len() >= 8
         && password.chars().any(|c| c.is_ascii_uppercase())
         && password.chars().any(|c| c.is_ascii_lowercase())
         && password.chars().any(|c| c.is_numeric())
+    {
+        Ok(())
+    } else {
+        Err(ValidationError::new("Password is invalid"))
+    }
 }
 
 pub async fn sign_up(
     State(app): State<AppState>,
     Json(req): Json<SignUpUserRequest>,
 ) -> anyhow::Result<impl IntoResponse, AppError> {
-    if req.display_id.is_empty() {
-        return Err(AppError{
-            status: StatusCode::BAD_REQUEST,
-            response: Json(serde_json::json!("Display ID is empty")),
-        });
-    }
-    if req.username.is_empty() {
-        return Err(AppError{
-            status: StatusCode::BAD_REQUEST,
-            response: Json(serde_json::json!("Username is empty")),
-        });
-    }
-    if is_valid_password(&req.password) {
-        return Err(AppError{
-            status: StatusCode::BAD_REQUEST,
-            response: Json(serde_json::json!("Password is invalid")),
-        });
-    }
-
     if app
         .db
         .get_user_by_display_id(&req.display_id)
@@ -58,7 +48,7 @@ pub async fn sign_up(
     {
         return Err(AppError {
             status: StatusCode::BAD_REQUEST,
-            response: Json(serde_json::json!("Display ID is already used")),    
+            response: Json(serde_json::json!("Display ID is already used")),
         });
     }
 
@@ -69,17 +59,14 @@ pub async fn sign_up(
         username: req.username,
     };
 
-    app.db
-        .create_user(&user)
-        .await
-        .map_err(|_| AppError{
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: Json(serde_json::json!("Failed to create user")),
-        })?;
+    app.db.create_user(&user).await.map_err(|_| AppError {
+        status: StatusCode::INTERNAL_SERVER_ERROR,
+        response: Json(serde_json::json!("Failed to create user")),
+    })?;
     app.db
         .save_password(user.display_id, req.password)
         .await
-        .map_err(|_| AppError{
+        .map_err(|_| AppError {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             response: Json(serde_json::json!("Failed to save password")),
         })?;
@@ -87,9 +74,11 @@ pub async fn sign_up(
     Ok(())
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
 pub struct SignInUserRequest {
+    #[validate(length(min = 1, message = "Display ID is empty"))]
     pub display_id: String,
+    #[validate(length(min = 1, message = "Password is empty"))]
     pub password: String,
 }
 
@@ -109,7 +98,7 @@ pub async fn login(
             status: StatusCode::UNAUTHORIZED,
             response: Json(serde_json::json!("User does not exist")),
         })?;
-    
+
     if !app
         .db
         .verify_user_password(req.display_id, req.password)
@@ -125,13 +114,10 @@ pub async fn login(
         });
     }
 
-    let cookie_value = app.db
-        .create_session(user.id)
-        .await
-        .map_err(|_| AppError {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: Json(serde_json::json!("Failed to create session")),
-        })?;
+    let cookie_value = app.db.create_session(user.id).await.map_err(|_| AppError {
+        status: StatusCode::INTERNAL_SERVER_ERROR,
+        response: Json(serde_json::json!("Failed to create session")),
+    })?;
 
     let mut headers = HeaderMap::new();
 
@@ -159,7 +145,7 @@ pub async fn logout(
             status: StatusCode::INTERNAL_SERVER_ERROR,
             response: Json(serde_json::json!("Failed to delete session")),
         })?;
-    
+
     Ok(Redirect::to("/"))
 }
 

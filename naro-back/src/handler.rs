@@ -1,5 +1,5 @@
-use crate::database::auth;
 use crate::AppState;
+use crate::{context::validated_json::ValidatedJson, database::auth};
 use axum::{
     middleware::from_fn_with_state,
     response::IntoResponse,
@@ -17,9 +17,18 @@ async fn ping() -> impl IntoResponse {
     "pong"
 }
 
+#[derive(serde::Deserialize, validator::Validate)]
+struct HelloRequest {
+    name: String,
+}
+async fn hello_handler(ValidatedJson(req): ValidatedJson<HelloRequest>) -> impl IntoResponse {
+    format!("Hello, {}!", req.name)
+}
+
 pub fn make_router(state: AppState) -> axum::Router {
     let public = axum::Router::new()
         .route("/", get(root))
+        .route("/hello", post(hello_handler))
         .route("/ping", get(ping))
         .route("/signup", post(session::sign_up))
         .route("/login", post(session::login));
