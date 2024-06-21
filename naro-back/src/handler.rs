@@ -19,11 +19,13 @@ async fn ping() -> impl IntoResponse {
 
 #[derive(serde::Deserialize, validator::Validate)]
 struct HelloRequest {
+    #[validate(length(min = 1, message = "name is empty"))]
     name: String,
 }
 async fn hello_handler(ValidatedJson(req): ValidatedJson<HelloRequest>) -> impl IntoResponse {
     format!("Hello, {}!", req.name)
 }
+
 
 pub fn make_router(state: AppState) -> axum::Router {
     let public = axum::Router::new()

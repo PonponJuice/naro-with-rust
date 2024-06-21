@@ -24,12 +24,25 @@ where
             .await
             .map_err(|_| AppError {
                 status: StatusCode::BAD_REQUEST,
-                response: Json(serde_json::json!("Bad Request")),
+                response: Json(serde_json::json!({"error": "Bad Request"})),
             })?;
 
-        value.validate().map_err(|e| AppError {
-            status: StatusCode::BAD_REQUEST,
-            response: Json(serde_json::json!(e)),
+        value.validate().map_err(|e| {
+            let mut message = String::from("");
+            let errors = e.field_errors();
+            'out: for (_, v) in errors.into_iter()  {
+                for validation_error in v {
+                    if let Some(msg) = validation_error.clone().message {
+                        message.push_str(&msg);
+                        break 'out;
+                    }
+                }
+            }
+
+            AppError {
+                status: StatusCode::BAD_REQUEST,
+                response: Json(serde_json::json!({"error": "Validation Error", "messages": message})),
+            }
         })?;
         Ok(ValidatedJson(value))
     }

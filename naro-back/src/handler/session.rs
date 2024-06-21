@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError};
 
 use crate::context::errors::AppError;
+use crate::context::validated_json::ValidatedJson;
 use crate::database::auth::MyUuid;
 use crate::database::user::User;
 use crate::AppState;
@@ -28,13 +29,13 @@ fn is_valid_password(password: &str) -> Result<(), ValidationError> {
     {
         Ok(())
     } else {
-        Err(ValidationError::new("Password is invalid"))
+        Err(ValidationError::new(""))
     }
 }
 
 pub async fn sign_up(
     State(app): State<AppState>,
-    Json(req): Json<SignUpUserRequest>,
+    ValidatedJson(req): ValidatedJson<SignUpUserRequest>,
 ) -> anyhow::Result<impl IntoResponse, AppError> {
     if app
         .db
@@ -84,7 +85,7 @@ pub struct SignInUserRequest {
 
 pub async fn login(
     State(app): State<AppState>,
-    Json(req): Json<SignInUserRequest>,
+    ValidatedJson(req): ValidatedJson<SignInUserRequest>,
 ) -> anyhow::Result<impl IntoResponse, AppError> {
     let user = app
         .db
