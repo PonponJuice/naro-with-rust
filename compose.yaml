@@ -2,7 +2,7 @@ services:
   mysql:
     image: kakakakakku/mysql-world-database:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: $MYSQL_PASSWORD
       TZ: Asia/Tokyo
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
     expose:
