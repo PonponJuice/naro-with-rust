@@ -4,6 +4,7 @@ use sqlx::{MySql, Pool};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+mod context;
 mod database;
 mod handler;
 
