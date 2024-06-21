@@ -43,13 +43,13 @@ pub async fn sign_up(
         .await
         .map_err(|_| AppError {
             status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: Json(serde_json::json!("Failed to get user")),
+            response: "Failed to get user".to_string(),
         })?
         .is_some()
     {
         return Err(AppError {
             status: StatusCode::BAD_REQUEST,
-            response: Json(serde_json::json!("Display ID is already used")),
+            response: "Display ID is already used".to_string(),
         });
     }
 
@@ -62,14 +62,14 @@ pub async fn sign_up(
 
     app.db.create_user(&user).await.map_err(|_| AppError {
         status: StatusCode::INTERNAL_SERVER_ERROR,
-        response: Json(serde_json::json!("Failed to create user")),
+        response: "Failed to create user".to_string(),
     })?;
     app.db
         .save_password(user.display_id, req.password)
         .await
         .map_err(|_| AppError {
             status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: Json(serde_json::json!("Failed to save password")),
+            response: "Failed to save password".to_string(),
         })?;
 
     Ok(())
@@ -93,11 +93,11 @@ pub async fn login(
         .await
         .map_err(|_| AppError {
             status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: Json(serde_json::json!("Failed to get user")),
+            response: "Failed to get user".to_string(),
         })?
         .ok_or(AppError {
             status: StatusCode::UNAUTHORIZED,
-            response: Json(serde_json::json!("User does not exist")),
+            response: "User does not exist".to_string(),
         })?;
 
     if !app
@@ -106,18 +106,18 @@ pub async fn login(
         .await
         .map_err(|_| AppError {
             status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: Json(serde_json::json!("Failed to verify password")),
+            response: "Failed to verify password".to_string(),
         })?
     {
         return Err(AppError {
             status: StatusCode::UNAUTHORIZED,
-            response: Json(serde_json::json!("Password is incorrect")),
+            response: "Password is incorrect".to_string(),
         });
     }
 
     let cookie_value = app.db.create_session(user.id).await.map_err(|_| AppError {
         status: StatusCode::INTERNAL_SERVER_ERROR,
-        response: Json(serde_json::json!("Failed to create session")),
+        response: "Failed to create session".to_string(),
     })?;
 
     let mut headers = HeaderMap::new();
@@ -128,7 +128,7 @@ pub async fn login(
             .parse()
             .map_err(|_| AppError {
                 status: StatusCode::INTERNAL_SERVER_ERROR,
-                response: Json(serde_json::json!("Failed to create cookie")),
+                response: "Failed to create cookie".to_string(),
             })?,
     );
 
@@ -144,7 +144,7 @@ pub async fn logout(
         .await
         .map_err(|_| AppError {
             status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: Json(serde_json::json!("Failed to delete session")),
+            response: "Failed to delete session".to_string(),
         })?;
 
     Ok(Redirect::to("/"))
@@ -160,11 +160,11 @@ pub async fn me(
         .await
         .map_err(|_| AppError {
             status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: Json(serde_json::json!("Failed to get user")),
+            response: "Failed to get user".to_string(),
         })?
         .ok_or(AppError {
             status: StatusCode::UNAUTHORIZED,
-            response: Json(serde_json::json!("User does not exist")),
+            response: "User does not exist".to_string(),
         })?;
 
     Ok(Json(user))

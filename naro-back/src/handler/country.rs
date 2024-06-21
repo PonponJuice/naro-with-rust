@@ -16,11 +16,11 @@ pub async fn get_city_handler(
         .await
         .map_err(|_| AppError {
             status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: Json(serde_json::json!("Failed to get city")),
+            response: "Failed to get city".to_string(),
         })?
         .ok_or(AppError {
             status: StatusCode::NOT_FOUND,
-            response: Json(serde_json::json!("city does not exist")),
+            response: "city does not exist".to_string(),
         })?;
 
     Ok(Json(city))
@@ -32,7 +32,7 @@ pub async fn post_city_handler(
 ) -> anyhow::Result<impl IntoResponse, AppError> {
     let city = app.db.create_city(city).await.map_err(|_| AppError {
         status: StatusCode::INTERNAL_SERVER_ERROR,
-        response: Json(serde_json::json!("Failed to create city")),
+        response: "Failed to create city".to_string(),
     })?;
 
     Ok(Json(city))

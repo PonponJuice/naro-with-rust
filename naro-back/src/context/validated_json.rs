@@ -24,11 +24,11 @@ where
             .await
             .map_err(|_| AppError {
                 status: StatusCode::BAD_REQUEST,
-                response: Json(serde_json::json!({"error": "Bad Request"})),
+                response: "Bad Request".to_string(),
             })?;
 
         value.validate().map_err(|e| {
-            let mut message = String::from("");
+            let mut message = "".to_string();
             let errors = e.field_errors();
             'out: for (_, v) in errors.into_iter()  {
                 for validation_error in v {
@@ -41,7 +41,7 @@ where
 
             AppError {
                 status: StatusCode::BAD_REQUEST,
-                response: Json(serde_json::json!({"error": "Validation Error", "messages": message})),
+                response: format!("Validation Error: {}", message),
             }
         })?;
         Ok(ValidatedJson(value))
