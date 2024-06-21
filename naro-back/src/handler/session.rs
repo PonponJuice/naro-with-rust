@@ -41,16 +41,13 @@ pub async fn sign_up(
         .db
         .get_user_by_display_id(&req.display_id)
         .await
-        .map_err(|_| AppError {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: "Failed to get user".to_string(),
-        })?
+        .map_err(|_| AppError::new(StatusCode::INTERNAL_SERVER_ERROR, "Failed to get user"))?
         .is_some()
     {
-        return Err(AppError {
-            status: StatusCode::BAD_REQUEST,
-            response: "Display ID is already used".to_string(),
-        });
+        return Err(AppError::new(
+            StatusCode::BAD_REQUEST,
+            "Display ID is already used",
+        ));
     }
 
     let id = uuid::Uuid::new_v4();
@@ -60,17 +57,14 @@ pub async fn sign_up(
         username: req.username,
     };
 
-    app.db.create_user(&user).await.map_err(|_| AppError {
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-        response: "Failed to create user".to_string(),
-    })?;
+    app.db
+        .create_user(&user)
+        .await
+        .map_err(|_| AppError::new(StatusCode::INTERNAL_SERVER_ERROR, "Failed to create user"))?;
     app.db
         .save_password(user.display_id, req.password)
         .await
-        .map_err(|_| AppError {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: "Failed to save password".to_string(),
-        })?;
+        .map_err(|_| AppError::new(StatusCode::INTERNAL_SERVER_ERROR, "Failed to save password"))?;
 
     Ok(())
 }
@@ -91,33 +85,34 @@ pub async fn login(
         .db
         .get_user_by_display_id(&req.display_id)
         .await
-        .map_err(|_| AppError {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: "Failed to get user".to_string(),
-        })?
-        .ok_or(AppError {
-            status: StatusCode::UNAUTHORIZED,
-            response: "User does not exist".to_string(),
-        })?;
+        .map_err(|_| AppError::new(StatusCode::INTERNAL_SERVER_ERROR, "Failed to get user"))?
+        .ok_or(AppError::new(
+            StatusCode::UNAUTHORIZED,
+            "User does not exist",
+        ))?;
 
     if !app
         .db
         .verify_user_password(req.display_id, req.password)
         .await
-        .map_err(|_| AppError {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: "Failed to verify password".to_string(),
+        .map_err(|_| {
+            AppError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to verify password",
+            )
         })?
     {
-        return Err(AppError {
-            status: StatusCode::UNAUTHORIZED,
-            response: "Password is incorrect".to_string(),
-        });
+        return Err(AppError::new(
+            StatusCode::UNAUTHORIZED,
+            "Password is incorrect",
+        ));
     }
 
-    let cookie_value = app.db.create_session(user.id).await.map_err(|_| AppError {
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-        response: "Failed to create session".to_string(),
+    let cookie_value = app.db.create_session(user.id).await.map_err(|_| {
+        AppError::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to create session",
+        )
     })?;
 
     let mut headers = HeaderMap::new();
@@ -126,9 +121,8 @@ pub async fn login(
         SET_COOKIE,
         format!("session_id={cookie_value}; HttpOnly; SameSite=Strict")
             .parse()
-            .map_err(|_| AppError {
-                status: StatusCode::INTERNAL_SERVER_ERROR,
-                response: "Failed to create cookie".to_string(),
+            .map_err(|_| {
+                AppError::new(StatusCode::INTERNAL_SERVER_ERROR, "Failed to create cookie")
             })?,
     );
 
@@ -142,9 +136,11 @@ pub async fn logout(
     app.db
         .delete_session(session_id.session_id)
         .await
-        .map_err(|_| AppError {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: "Failed to delete session".to_string(),
+        .map_err(|_| {
+            AppError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to delete session",
+            )
         })?;
 
     Ok(Redirect::to("/"))
@@ -158,14 +154,11 @@ pub async fn me(
         .db
         .get_user_by_uuid(&uuid.uuid)
         .await
-        .map_err(|_| AppError {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            response: "Failed to get user".to_string(),
-        })?
-        .ok_or(AppError {
-            status: StatusCode::UNAUTHORIZED,
-            response: "User does not exist".to_string(),
-        })?;
+        .map_err(|_| AppError::new(StatusCode::INTERNAL_SERVER_ERROR, "Failed to get user"))?
+        .ok_or(AppError::new(
+            StatusCode::UNAUTHORIZED,
+            "User does not exist",
+        ))?;
 
     Ok(Json(user))
 }

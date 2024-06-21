@@ -22,15 +22,12 @@ where
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         let Json(value) = Json::<T>::from_request(req, state)
             .await
-            .map_err(|_| AppError {
-                status: StatusCode::BAD_REQUEST,
-                response: "Bad Request".to_string(),
-            })?;
+            .map_err(|_| AppError::new(StatusCode::BAD_REQUEST, "Bad Request"))?;
 
         value.validate().map_err(|e| {
             let mut message = "".to_string();
             let errors = e.field_errors();
-            'out: for (_, v) in errors.into_iter()  {
+            'out: for (_, v) in errors.into_iter() {
                 for validation_error in v {
                     if let Some(msg) = validation_error.clone().message {
                         message.push_str(&msg);
@@ -39,10 +36,7 @@ where
                 }
             }
 
-            AppError {
-                status: StatusCode::BAD_REQUEST,
-                response: format!("Validation Error: {}", message),
-            }
+            AppError::new(StatusCode::BAD_REQUEST, message)
         })?;
         Ok(ValidatedJson(value))
     }

@@ -1,8 +1,17 @@
 use axum::{http::StatusCode, response::IntoResponse, Json};
 
 pub struct AppError {
-    pub status: StatusCode,
-    pub response: String,
+    status: StatusCode,
+    response: String,
+}
+
+impl AppError {
+    pub fn new(status: StatusCode, response: impl Into<String>) -> Self {
+        Self {
+            status,
+            response: response.into(),
+        }
+    }
 }
 
 impl<E> From<E> for AppError
@@ -19,6 +28,10 @@ where
 
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
-        (self.status, Json(serde_json::json!({"error": self.response}))).into_response()
+        (
+            self.status,
+            Json(serde_json::json!({"error": self.response})),
+        )
+            .into_response()
     }
 }

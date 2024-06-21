@@ -26,7 +26,6 @@ async fn hello_handler(ValidatedJson(req): ValidatedJson<HelloRequest>) -> impl 
     format!("Hello, {}!", req.name)
 }
 
-
 pub fn make_router(state: AppState) -> axum::Router {
     let public = axum::Router::new()
         .route("/", get(root))
